@@ -1,7 +1,7 @@
 import type {
   SmallStackConfig,
   User,
-  AuthTokens,
+  TokenResponse,
   ApiResponse,
   RegisterData,
   RequestOptions,
@@ -13,11 +13,12 @@ export class SmallStackClient {
 
   /** Auth namespace with authentication-related methods. */
   public readonly auth: {
-    login: (username: string, password: string) => Promise<ApiResponse<AuthTokens>>;
-    logout: () => Promise<ApiResponse<void>>;
+    login: (username: string, password: string) => Promise<ApiResponse<TokenResponse>>;
+    logout: () => Promise<ApiResponse<{ message: string }>>;
     me: () => Promise<ApiResponse<User>>;
-    register: (data: RegisterData) => Promise<ApiResponse<User>>;
-    refreshToken: () => Promise<ApiResponse<AuthTokens>>;
+    register: (data: RegisterData) => Promise<ApiResponse<TokenResponse>>;
+    refreshToken: (expiresHours?: number) => Promise<ApiResponse<TokenResponse>>;
+    changePassword: (current_password: string, new_password: string) => Promise<ApiResponse<{ message: string }>>;
   };
 
   constructor(config: SmallStackConfig) {
@@ -30,6 +31,7 @@ export class SmallStackClient {
       me: this.me.bind(this),
       register: this.register.bind(this),
       refreshToken: this.refreshToken.bind(this),
+      changePassword: this.changePassword.bind(this),
     };
   }
 
@@ -94,21 +96,21 @@ export class SmallStackClient {
   private async login(
     username: string,
     password: string,
-  ): Promise<ApiResponse<AuthTokens>> {
-    const result = await this.api<AuthTokens>("/api/auth/login/", {
+  ): Promise<ApiResponse<TokenResponse>> {
+    const result = await this.api<TokenResponse>("/api/auth/token/", {
       method: "POST",
       body: { username, password },
     });
 
-    if (result.ok && result.data?.access) {
-      this.token = result.data.access;
+    if (result.ok && result.data?.token) {
+      this.token = result.data.token;
     }
 
     return result;
   }
 
-  private async logout(): Promise<ApiResponse<void>> {
-    const result = await this.api<void>("/api/auth/logout/", {
+  private async logout(): Promise<ApiResponse<{ message: string }>> {
+    const result = await this.api<{ message: string }>("/api/auth/logout/", {
       method: "POST",
     });
 
@@ -123,22 +125,39 @@ export class SmallStackClient {
     return this.api<User>("/api/auth/me/");
   }
 
-  private async register(data: RegisterData): Promise<ApiResponse<User>> {
-    return this.api<User>("/api/auth/register/", {
+  private async register(data: RegisterData): Promise<ApiResponse<TokenResponse>> {
+    const result = await this.api<TokenResponse>("/api/auth/register/", {
       method: "POST",
       body: data,
     });
-  }
 
-  private async refreshToken(): Promise<ApiResponse<AuthTokens>> {
-    const result = await this.api<AuthTokens>("/api/auth/token/refresh/", {
-      method: "POST",
-    });
-
-    if (result.ok && result.data?.access) {
-      this.token = result.data.access;
+    if (result.ok && result.data?.token) {
+      this.token = result.data.token;
     }
 
     return result;
+  }
+
+  private async refreshToken(expiresHours?: number): Promise<ApiResponse<TokenResponse>> {
+    const result = await this.api<TokenResponse>("/api/auth/token/refresh/", {
+      method: "POST",
+      body: expiresHours != null ? { expires_hours: expiresHours } : undefined,
+    });
+
+    if (result.ok && result.data?.token) {
+      this.token = result.data.token;
+    }
+
+    return result;
+  }
+
+  private async changePassword(
+    current_password: string,
+    new_password: string,
+  ): Promise<ApiResponse<{ message: string }>> {
+    return this.api<{ message: string }>("/api/auth/password/", {
+      method: "POST",
+      body: { current_password, new_password },
+    });
   }
 }

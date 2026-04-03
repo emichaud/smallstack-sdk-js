@@ -3,7 +3,7 @@ export { SmallStackClient } from "./client.js";
 export type {
   SmallStackConfig,
   User,
-  AuthTokens,
+  TokenResponse,
   ApiResponse,
   PaginatedResponse,
   RegisterData,

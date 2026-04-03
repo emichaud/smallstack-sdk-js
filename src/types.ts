@@ -2,7 +2,7 @@
 export interface SmallStackConfig {
   /** Base URL of the SmallStack API (e.g. "https://example.com"). */
   baseUrl: string;
-  /** Optional API token for authentication. */
+  /** Optional Bearer token for authentication. */
   token?: string;
 }
 
@@ -11,16 +11,14 @@ export interface User {
   id: number;
   username: string;
   email: string;
-  first_name: string;
-  last_name: string;
-  is_active: boolean;
-  date_joined: string;
+  is_staff: boolean;
 }
 
-/** Token pair returned by the auth endpoints. */
-export interface AuthTokens {
-  access: string;
-  refresh: string;
+/** Token response returned by login, register, and refresh endpoints. */
+export interface TokenResponse {
+  token: string;
+  user: User;
+  expires_at: string;
 }
 
 /** Standard API response wrapper. */
