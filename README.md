@@ -82,7 +82,46 @@ Without `systemToken`, `register()` uses whatever token is currently set (backwa
 
 > **Security warning:** The system token is a privileged credential that can register users, list users, reset passwords, and deactivate accounts. **Do not put it in client-side environment variables** like `VITE_SYSTEM_TOKEN` or `NEXT_PUBLIC_SYSTEM_TOKEN` — these are bundled into JavaScript that anyone can view in their browser.
 >
-> For production SPAs, proxy registration through your own backend (e.g. a Next.js API route or Express endpoint) that holds the system token server-side. The `systemToken` config option is designed for **server-side contexts**: Node.js scripts, Next.js server components, API routes, or internal tools where the token is not exposed to the browser.
+> The `systemToken` config option is designed for **server-side contexts**: Node.js scripts, Next.js server components, API routes, or internal tools where the token is not exposed to the browser.
+
+#### Production Registration Proxy
+
+For production SPAs, proxy registration through a server-side endpoint:
+
+**Next.js API Route** (`app/api/register/route.ts`):
+
+```typescript
+import { SmallStackClient } from "smallstack-sdk-js";
+
+const server = new SmallStackClient({
+  baseUrl: process.env.SMALLSTACK_API_URL!,   // not NEXT_PUBLIC_ — server only
+  systemToken: process.env.SMALLSTACK_SYSTEM_TOKEN!,
+});
+
+export async function POST(request: Request) {
+  const body = await request.json();
+  const res = await server.auth.register(body);
+  return Response.json(res.data, { status: res.status });
+}
+```
+
+**Express** (`routes/register.js`):
+
+```javascript
+import { SmallStackClient } from "smallstack-sdk-js";
+
+const server = new SmallStackClient({
+  baseUrl: process.env.SMALLSTACK_API_URL,
+  systemToken: process.env.SMALLSTACK_SYSTEM_TOKEN,
+});
+
+app.post("/api/register", async (req, res) => {
+  const result = await server.auth.register(req.body);
+  res.status(result.status).json(result.data);
+});
+```
+
+The browser calls your server, your server calls SmallStack with the system token, and the user's login token is returned to the browser. The system token never leaves your server.
 
 ### Browser Usage (Token Persistence)
 
