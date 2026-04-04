@@ -3,6 +3,7 @@ import type {
   User,
   TokenResponse,
   ApiResponse,
+  PasswordRequirement,
   RegisterData,
   RequestOptions,
 } from "./types.js";
@@ -22,6 +23,7 @@ export class SmallStackClient {
     register: (data: RegisterData) => Promise<ApiResponse<TokenResponse>>;
     refreshToken: (expiresHours?: number) => Promise<ApiResponse<TokenResponse>>;
     changePassword: (current_password: string, new_password: string) => Promise<ApiResponse<{ message: string }>>;
+    passwordRequirements: () => Promise<ApiResponse<PasswordRequirement[]>>;
   };
 
   constructor(config: SmallStackConfig) {
@@ -45,6 +47,7 @@ export class SmallStackClient {
       register: this.register.bind(this),
       refreshToken: this.refreshToken.bind(this),
       changePassword: this.changePassword.bind(this),
+      passwordRequirements: this.passwordRequirements.bind(this),
     };
   }
 
@@ -186,6 +189,10 @@ export class SmallStackClient {
     }
 
     return result;
+  }
+
+  private async passwordRequirements(): Promise<ApiResponse<PasswordRequirement[]>> {
+    return this.api<PasswordRequirement[]>("/api/auth/password-requirements/");
   }
 
   private async changePassword(

@@ -10,4 +10,5 @@ export type {
   RegisterData,
   RequestOptions,
   FieldErrors,
+  PasswordRequirement,
 } from "./types.js";

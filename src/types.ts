@@ -52,6 +52,13 @@ export interface RegisterData {
   last_name?: string;
 }
 
+/** A single password validation rule from Django's AUTH_PASSWORD_VALIDATORS. */
+export interface PasswordRequirement {
+  name: string;
+  description: string;
+  [key: string]: unknown;  // validators may include extra fields like min_length
+}
+
 /** Options for generic API requests. */
 export interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
