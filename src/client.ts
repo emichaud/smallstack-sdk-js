@@ -10,6 +10,9 @@ import type {
 export class SmallStackClient {
   private baseUrl: string;
   private token: string | undefined;
+  private systemToken: string | undefined;
+  private persist: boolean;
+  private storageKey: string;
 
   /** Auth namespace with authentication-related methods. */
   public readonly auth: {
@@ -23,7 +26,17 @@ export class SmallStackClient {
 
   constructor(config: SmallStackConfig) {
     this.baseUrl = config.baseUrl.replace(/\/+$/, "");
-    this.token = config.token;
+    this.systemToken = config.systemToken;
+    this.persist = config.persist ?? false;
+    this.storageKey = config.storageKey ?? "smallstack_token";
+
+    // Restore token: explicit > storage > none
+    if (config.token) {
+      this.token = config.token;
+    } else if (this.persist && typeof localStorage !== "undefined") {
+      const stored = localStorage.getItem(this.storageKey);
+      if (stored) this.token = stored;
+    }
 
     this.auth = {
       login: this.login.bind(this),
@@ -40,6 +53,7 @@ export class SmallStackClient {
    */
   setToken(token: string): void {
     this.token = token;
+    this.persistToken(token);
   }
 
   /**
@@ -47,6 +61,16 @@ export class SmallStackClient {
    */
   clearToken(): void {
     this.token = undefined;
+    this.persistToken(undefined);
+  }
+
+  private persistToken(token: string | undefined): void {
+    if (!this.persist || typeof localStorage === "undefined") return;
+    if (token) {
+      localStorage.setItem(this.storageKey, token);
+    } else {
+      localStorage.removeItem(this.storageKey);
+    }
   }
 
   /**
@@ -104,6 +128,7 @@ export class SmallStackClient {
 
     if (result.ok && result.data?.token) {
       this.token = result.data.token;
+      this.persistToken(result.data.token);
     }
 
     return result;
@@ -126,6 +151,13 @@ export class SmallStackClient {
   }
 
   private async register(data: RegisterData): Promise<ApiResponse<TokenResponse>> {
+    // If systemToken configured, use it for the register call
+    // then restore the previous token state on failure
+    const previousToken = this.token;
+    if (this.systemToken) {
+      this.token = this.systemToken;
+    }
+
     const result = await this.api<TokenResponse>("/api/auth/register/", {
       method: "POST",
       body: data,
@@ -133,6 +165,10 @@ export class SmallStackClient {
 
     if (result.ok && result.data?.token) {
       this.token = result.data.token;
+      this.persistToken(result.data.token);
+    } else if (this.systemToken) {
+      // Failure: restore whatever token was set before
+      this.token = previousToken;
     }
 
     return result;
@@ -146,6 +182,7 @@ export class SmallStackClient {
 
     if (result.ok && result.data?.token) {
       this.token = result.data.token;
+      this.persistToken(result.data.token);
     }
 
     return result;

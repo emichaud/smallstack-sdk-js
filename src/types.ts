@@ -4,6 +4,12 @@ export interface SmallStackConfig {
   baseUrl: string;
   /** Optional Bearer token for authentication. */
   token?: string;
+  /** Auth-level token used automatically for register(). */
+  systemToken?: string;
+  /** Auto-sync token to localStorage (browser only). Default: false. */
+  persist?: boolean;
+  /** localStorage key for persisted token. Default: "smallstack_token". */
+  storageKey?: string;
 }
 
 /** Represents an authenticated user. */

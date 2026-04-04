@@ -17,11 +17,13 @@ import { SmallStackClient } from "smallstack-sdk-js";
 
 const client = new SmallStackClient({
   baseUrl: "https://your-app.example.com",
+  systemToken: import.meta.env.VITE_SYSTEM_TOKEN, // optional: enables register()
+  persist: true,                                    // optional: sync token to localStorage
 });
 
 // Authenticate
 const { data } = await client.auth.login("admin", "password");
-console.log(data.token);       // Bearer token (store securely)
+console.log(data.token);       // Bearer token (auto-persisted if persist: true)
 console.log(data.expires_at);  // Token expiry timestamp
 
 // Get current user
@@ -56,6 +58,46 @@ await client.auth.refreshToken(48);
 await client.auth.logout();
 ```
 
+### Registration
+
+SmallStack's `/api/auth/register/` endpoint requires an auth-level token (a "system token"). The SDK handles this automatically when you provide `systemToken` in the config — no manual token swapping needed:
+
+```typescript
+const client = new SmallStackClient({
+  baseUrl: "https://your-app.example.com",
+  systemToken: import.meta.env.VITE_SYSTEM_TOKEN,
+});
+
+// register() uses the system token automatically, then sets the new user's token
+const res = await client.auth.register({
+  username: "newuser",
+  email: "new@example.com",
+  password: "securepassword",
+  password_confirm: "securepassword",
+});
+// res.data.token is now the logged-in user's token — no token juggling
+```
+
+Without `systemToken`, `register()` uses whatever token is currently set (backward compatible).
+
+### Browser Usage (Token Persistence)
+
+Enable `persist: true` to automatically sync the auth token to `localStorage`. On page refresh, the token is restored from storage:
+
+```typescript
+const client = new SmallStackClient({
+  baseUrl: "https://your-app.example.com",
+  persist: true,              // auto-sync to localStorage
+  storageKey: "my_app_token", // optional, default: "smallstack_token"
+});
+
+// After login, token is saved to localStorage automatically
+await client.auth.login("admin", "password");
+
+// On next page load, token is restored from localStorage
+// client.auth.me() works immediately without re-login
+```
+
 ### Pre-existing Token
 
 If you already have a token (e.g. from a cookie or secure storage):
@@ -74,10 +116,13 @@ client.setToken("your-bearer-token");
 
 ### `new SmallStackClient(config)`
 
-| Option    | Type     | Required | Description                          |
-|-----------|----------|----------|--------------------------------------|
-| `baseUrl` | `string` | Yes      | Base URL of your SmallStack instance |
-| `token`   | `string` | No       | Pre-existing Bearer token            |
+| Option        | Type      | Required | Description                                      |
+|---------------|-----------|----------|--------------------------------------------------|
+| `baseUrl`     | `string`  | Yes      | Base URL of your SmallStack instance             |
+| `token`       | `string`  | No       | Pre-existing Bearer token                        |
+| `systemToken` | `string`  | No       | Auth-level token for `register()` (auto-proxied) |
+| `persist`     | `boolean` | No       | Auto-sync token to localStorage (default: false) |
+| `storageKey`  | `string`  | No       | localStorage key (default: `"smallstack_token"`) |
 
 ### `client.auth`
 
