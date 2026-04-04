@@ -1,4 +1,5 @@
 export { SmallStackClient } from "./client.js";
+export { parseFieldErrors } from "./types.js";
 
 export type {
   SmallStackConfig,
@@ -8,4 +9,5 @@ export type {
   PaginatedResponse,
   RegisterData,
   RequestOptions,
+  FieldErrors,
 } from "./types.js";

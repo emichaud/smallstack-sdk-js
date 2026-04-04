@@ -59,3 +59,45 @@ export interface RequestOptions {
   body?: unknown;
   params?: Record<string, string>;
 }
+
+/** Per-field validation errors returned by SmallStack. */
+export type FieldErrors = Record<string, string[]>;
+
+/**
+ * Extract per-field validation errors from a failed API response.
+ *
+ * SmallStack returns validation errors as `{ field_name: ["error message", ...] }`.
+ * This helper extracts those into a typed `FieldErrors` object, ignoring
+ * non-array values (like `detail` strings).
+ *
+ * Returns `null` if no field errors are found (e.g. the response is a
+ * non-validation error like 401 or 500).
+ *
+ * @example
+ * ```ts
+ * const res = await client.auth.register(data);
+ * if (!res.ok) {
+ *   const errors = parseFieldErrors(res);
+ *   if (errors) {
+ *     // { username: ["A user with that username already exists."] }
+ *     console.log(errors.username?.[0]);
+ *   }
+ * }
+ * ```
+ */
+export function parseFieldErrors(response: ApiResponse): FieldErrors | null {
+  const data = response.data;
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+
+  const errors: FieldErrors = {};
+  let found = false;
+
+  for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+    if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
+      errors[key] = value as string[];
+      found = true;
+    }
+  }
+
+  return found ? errors : null;
+}

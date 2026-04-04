@@ -80,6 +80,10 @@ const res = await client.auth.register({
 
 Without `systemToken`, `register()` uses whatever token is currently set (backward compatible).
 
+> **Security warning:** The system token is a privileged credential that can register users, list users, reset passwords, and deactivate accounts. **Do not put it in client-side environment variables** like `VITE_SYSTEM_TOKEN` or `NEXT_PUBLIC_SYSTEM_TOKEN` — these are bundled into JavaScript that anyone can view in their browser.
+>
+> For production SPAs, proxy registration through your own backend (e.g. a Next.js API route or Express endpoint) that holds the system token server-side. The `systemToken` config option is designed for **server-side contexts**: Node.js scripts, Next.js server components, API routes, or internal tools where the token is not exposed to the browser.
+
 ### Browser Usage (Token Persistence)
 
 Enable `persist: true` to automatically sync the auth token to `localStorage`. On page refresh, the token is restored from storage:
@@ -281,6 +285,33 @@ if (!result.ok) {
   console.error(`Login failed (${result.status})`, result.data);
 }
 ```
+
+### Field Validation Errors
+
+SmallStack returns validation errors as `{ field_name: ["error message", ...] }`. Use `parseFieldErrors()` to extract them:
+
+```typescript
+import { parseFieldErrors } from "smallstack-sdk-js";
+
+const res = await client.auth.register(data);
+if (!res.ok) {
+  const errors = parseFieldErrors(res);
+  if (errors) {
+    // { username: ["A user with that username already exists."] }
+    console.log(errors.username?.[0]);
+
+    // Show errors next to form fields
+    Object.entries(errors).forEach(([field, messages]) => {
+      console.error(`${field}: ${messages.join(", ")}`);
+    });
+  } else {
+    // Non-validation error (401, 500, etc.)
+    console.error("Request failed:", res.status);
+  }
+}
+```
+
+`parseFieldErrors()` returns `null` for non-validation errors (401, 500, etc.), so you can branch on the error type cleanly.
 
 ## Development
 
